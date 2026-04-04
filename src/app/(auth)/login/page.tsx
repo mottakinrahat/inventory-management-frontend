@@ -1,83 +1,178 @@
 "use client";
 
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock } from "lucide-react";
-import { Button, Input } from "@/component/ui/ui";
+import { Mail, Lock, Boxes, AlertCircle } from "lucide-react";
+import { useAppStore } from "@/lib/store";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAppStore();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
+    setError("");
+    if (!email || !password) { setError("Please enter email and password."); return; }
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 600));
+    login(email, password);
     router.push("/dashboard");
   };
 
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
     setEmail("demo@example.com");
-    setPassword("123456");
+    setPassword("demo1234");
+    setLoading(true);
+    await new Promise((r) => setTimeout(r, 600));
+    login("demo@example.com", "demo1234");
+    router.push("/dashboard");
   };
 
   return (
-    <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">
-      
-      {/* LEFT SIDE (Branding) */}
-      <div className="hidden md:flex flex-col justify-center items-center bg-gradient-to-br from-indigo-600 to-indigo-800 text-white p-10">
-        <h1 className="text-4xl font-bold mb-4">
-          Smart Inventory
-        </h1>
-        <p className="text-indigo-100 text-center max-w-sm">
-          Manage your products, orders, and stock effortlessly with a powerful system.
+    <div className="min-h-screen flex" style={{ background: "oklch(0.10 0.01 260)" }}>
+
+      {/* LEFT — Branding */}
+      <div className="hidden lg:flex flex-col justify-between w-[480px] shrink-0 p-12 relative overflow-hidden"
+        style={{ background: "oklch(0.12 0.015 260)", borderRight: "1px solid oklch(0.20 0.02 260)" }}>
+
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute w-96 h-96 rounded-full opacity-10 -top-20 -left-20"
+            style={{ background: "radial-gradient(circle, oklch(0.62 0.22 270), transparent)" }} />
+          <div className="absolute w-64 h-64 rounded-full opacity-8 bottom-10 right-10"
+            style={{ background: "radial-gradient(circle, oklch(0.65 0.20 340), transparent)" }} />
+        </div>
+
+        <div className="relative">
+          <div className="flex items-center gap-3 mb-12">
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center pulse-glow"
+              style={{ background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.58 0.22 290))" }}>
+              <Boxes size={20} className="text-white" />
+            </div>
+            <span className="text-white font-semibold text-lg">Smart Inventory</span>
+          </div>
+
+          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
+            Manage your<br />
+            <span className="gradient-text">inventory smarter</span>
+          </h2>
+          <p className="text-base leading-relaxed" style={{ color: "oklch(0.55 0.01 260)" }}>
+            Real-time stock tracking, order management, and intelligent restock alerts — all in one place.
+          </p>
+        </div>
+
+        {/* Features */}
+        <div className="relative space-y-3">
+          {[
+            "📦 Real-time stock level tracking",
+            "🛒 Full order lifecycle management",
+            "⚡ Instant low-stock alerts",
+            "📊 Business insights & analytics",
+          ].map((feat) => (
+            <div key={feat} className="flex items-center gap-3 text-sm"
+              style={{ color: "oklch(0.70 0.01 260)" }}>
+              <span>{feat}</span>
+            </div>
+          ))}
+        </div>
+
+        <p className="relative text-xs" style={{ color: "oklch(0.40 0.01 260)" }}>
+          © 2026 Smart Inventory System
         </p>
       </div>
 
-      {/* RIGHT SIDE (Form) */}
-      <div className="flex items-center justify-center bg-gray-50 px-6">
-        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg">
-          <h2 className="text-2xl font-semibold mb-2">
-            Welcome Back 👋
-          </h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Please enter your details to continue
-          </p>
+      {/* RIGHT — Form */}
+      <div className="flex-1 flex items-center justify-center p-6">
+        <div className="w-full max-w-md">
+          {/* Mobile logo */}
+          <div className="flex items-center gap-3 mb-8 lg:hidden justify-center">
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.58 0.22 290))" }}>
+              <Boxes size={18} className="text-white" />
+            </div>
+            <span className="text-white font-semibold text-lg">Smart Inventory</span>
+          </div>
 
-          <div className="space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              icon={<Mail size={18} />}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              icon={<Lock size={18} />}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-
-            <Button onClick={handleLogin}>Sign In</Button>
-
-            <Button variant="outline" onClick={handleDemoLogin}>
-              Demo Login
-            </Button>
-
-            <p className="text-sm text-center text-gray-500">
-              Don’t have an account?{" "}
-              <span
-                onClick={() => router.push("/signup")}
-                className="text-indigo-600 cursor-pointer font-medium"
-              >
-                Sign up
-              </span>
+          <div className="section-card">
+            <h1 className="text-2xl font-bold text-white mb-1">Welcome back 👋</h1>
+            <p className="text-sm mb-6" style={{ color: "oklch(0.55 0.01 260)" }}>
+              Sign in to your account to continue
             </p>
+
+            {error && (
+              <div className="mb-4 px-4 py-3 rounded-xl text-sm flex items-center gap-2"
+                style={{ background: "oklch(0.60 0.22 25 / 0.12)", color: "oklch(0.65 0.22 25)", border: "1px solid oklch(0.60 0.22 25 / 0.25)" }}>
+                <AlertCircle size={14} /> {error}
+              </div>
+            )}
+
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: "oklch(0.65 0.01 260)" }}>
+                  Email Address
+                </label>
+                <div className="flex items-center gap-2 input-field"
+                  style={{ display: "flex" }}>
+                  <Mail size={15} style={{ color: "oklch(0.50 0.01 260)" }} className="shrink-0" />
+                  <input
+                    id="login-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    className="bg-transparent outline-none w-full text-white placeholder:text-gray-600 text-sm"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-medium mb-1.5 block" style={{ color: "oklch(0.65 0.01 260)" }}>
+                  Password
+                </label>
+                <div className="flex items-center gap-2 input-field" style={{ display: "flex" }}>
+                  <Lock size={15} style={{ color: "oklch(0.50 0.01 260)" }} className="shrink-0" />
+                  <input
+                    id="login-password"
+                    type="password"
+                    placeholder="••••••••"
+                    className="bg-transparent outline-none w-full text-white placeholder:text-gray-600 text-sm"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+                  />
+                </div>
+              </div>
+
+              <button id="login-btn" onClick={handleLogin} disabled={loading}
+                className="btn-primary w-full py-3 mt-2 text-base">
+                {loading ? "Signing in..." : "Sign In"}
+              </button>
+
+              <div className="relative flex items-center gap-3">
+                <div className="h-px flex-1" style={{ background: "oklch(0.22 0.02 260)" }} />
+                <span className="text-xs" style={{ color: "oklch(0.40 0.01 260)" }}>or</span>
+                <div className="h-px flex-1" style={{ background: "oklch(0.22 0.02 260)" }} />
+              </div>
+
+              <button id="demo-login-btn" onClick={handleDemoLogin} disabled={loading}
+                className="btn-secondary w-full py-3">
+                🚀 Demo Login (pre-filled)
+              </button>
+
+              <p className="text-center text-sm" style={{ color: "oklch(0.50 0.01 260)" }}>
+                Don't have an account?{" "}
+                <span onClick={() => router.push("/signup")}
+                  className="cursor-pointer font-medium"
+                  style={{ color: "oklch(0.75 0.18 270)" }}>
+                  Sign up
+                </span>
+              </p>
+            </div>
           </div>
         </div>
       </div>

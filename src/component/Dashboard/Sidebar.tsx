@@ -7,9 +7,11 @@ import {
   ShoppingCart,
   Layers,
   AlertTriangle,
+  Activity,
+  LogOut,
+  Boxes,
 } from "lucide-react";
-
-import { cn } from "@/lib/utils";
+import { useAppStore } from "@/lib/store";
 
 const menu = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -17,49 +19,89 @@ const menu = [
   { name: "Categories", path: "/categories", icon: Layers },
   { name: "Orders", path: "/orders", icon: ShoppingCart },
   { name: "Restock Queue", path: "/restock", icon: AlertTriangle },
+  { name: "Activity Log", path: "/activity", icon: Activity },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { currentUser, logout, restockQueue } = useAppStore();
+
+  const handleLogout = () => {
+    logout();
+    router.push("/login");
+  };
 
   return (
-    <aside className="hidden md:flex h-screen w-64 flex-col border-r bg-background">
-      {/* LOGO */}
-      <div className="h-16 flex items-center px-6 border-b">
-        <h1 className="text-lg font-semibold tracking-tight">
-          Inventory System
-        </h1>
+    <aside className="hidden md:flex h-screen w-64 flex-col fixed inset-y-0 left-0 z-50"
+      style={{ background: "oklch(0.12 0.015 260)", borderRight: "1px solid oklch(0.20 0.02 260)" }}>
+
+      {/* Logo */}
+      <div className="h-16 flex items-center gap-3 px-5 border-b"
+        style={{ borderColor: "oklch(0.20 0.02 260)" }}>
+        <div className="w-8 h-8 rounded-xl flex items-center justify-center pulse-glow"
+          style={{ background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.58 0.22 290))" }}>
+          <Boxes size={16} className="text-white" />
+        </div>
+        <div>
+          <h1 className="text-sm font-bold text-white leading-none">Smart Inventory</h1>
+          <p className="text-xs mt-0.5" style={{ color: "oklch(0.55 0.01 260)" }}>Management System</p>
+        </div>
       </div>
 
-      {/* MENU */}
-      <div className="flex-1 px-3 py-4 space-y-1">
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menu.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
+          const badge = item.path === "/restock" && restockQueue.length > 0
+            ? restockQueue.length
+            : null;
 
           return (
             <button
               key={item.name}
+              id={`nav-${item.name.toLowerCase().replace(/\s+/g, "-")}`}
               onClick={() => router.push(item.path)}
-              className={cn(
-                "w-full flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-all",
-                "hover:bg-accent hover:text-accent-foreground",
-                isActive
-                  ? "bg-accent text-accent-foreground font-medium shadow-sm"
-                  : "text-muted-foreground"
-              )}
+              className={`sidebar-link w-full ${isActive ? "active" : ""}`}
             >
-              <Icon size={18} />
-              {item.name}
+              <Icon size={17} className="shrink-0" />
+              <span className="flex-1 text-left">{item.name}</span>
+              {badge && (
+                <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full"
+                  style={{ background: "oklch(0.55 0.24 270 / 0.2)", color: "oklch(0.78 0.15 270)" }}>
+                  {badge}
+                </span>
+              )}
             </button>
           );
         })}
-      </div>
+      </nav>
 
-      {/* FOOTER */}
-      <div className="p-4 border-t text-xs text-muted-foreground">
-        © 2026 Inventory App
+      {/* User footer */}
+      <div className="p-4 border-t" style={{ borderColor: "oklch(0.20 0.02 260)" }}>
+        {currentUser && (
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white shrink-0"
+              style={{ background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.62 0.22 290))" }}>
+              {currentUser.name[0]}
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium truncate text-white">{currentUser.name}</p>
+              <p className="text-xs truncate" style={{ color: "oklch(0.55 0.01 260)" }}>
+                {currentUser.role}
+              </p>
+            </div>
+          </div>
+        )}
+        <button
+          onClick={handleLogout}
+          className="sidebar-link w-full text-red-400 hover:text-red-300"
+          style={{ color: "oklch(0.65 0.18 25)" }}
+        >
+          <LogOut size={15} />
+          <span>Sign Out</span>
+        </button>
       </div>
     </aside>
   );
