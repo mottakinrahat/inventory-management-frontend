@@ -26,9 +26,9 @@ export default function Navbar() {
   const title = PAGE_TITLES[pathname] ?? "Dashboard";
   const hasAlerts = restockQueue.some((r: any) => r.priority === "High");
 
-  const displayName = currentUser?.name || currentUser?.email || "Admin";
+  const displayName = typeof currentUser?.name === "object" ? currentUser.name.name : (currentUser?.name || currentUser?.email || "Admin");
   
-  const avatarInitial = (displayName === "Admin" ? "A" : (displayName[0]?.toUpperCase() ?? "A"));
+  const avatarInitial = (displayName === "Admin" ? "A" : (String(displayName)[0]?.toUpperCase() ?? "A"));
 
   return (
     <header className="h-16 flex items-center justify-between px-6 gap-4 border-b"

@@ -1,12 +1,12 @@
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
-import type { RootState } from '../store'; // adjust path if needed
+import type { RootState } from '../store';
 
 export const apiSlice = createApi({
   reducerPath: 'api',
   baseQuery: fetchBaseQuery({
     baseUrl: 'https://inventory-backend-d.vercel.app/api/v1',
     prepareHeaders: (headers, { getState }) => {
-      // ✅ Read token from Redux state (not localStorage)
+      // ✅ Now correctly reads .accessToken (was reading undefined before)
       const token = (getState() as RootState).auth.accessToken;
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
@@ -32,11 +32,9 @@ export const apiSlice = createApi({
         body: userData,
       }),
     }),
+    // ✅ Back to simple query — prepareHeaders now works correctly
     getUserMe: builder.query({
-      query: (token?: string) => ({
-        url: '/user/me',
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      }),
+      query: () => '/user/me',
       providesTags: ['User'],
     }),
 

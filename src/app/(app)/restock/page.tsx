@@ -16,10 +16,10 @@ const PRIORITY_CONFIG: Record<string, { bg: string; text: string; border: string
 };
 
 export default function RestockPage() {
-  const { data: queueRes } = useGetRestockQueueQuery({});
+  const { data: queueRes, isLoading: queueLoading, isError: queueError } = useGetRestockQueueQuery({});
   const restockQueue: any[] = queueRes?.data || queueRes || [];
 
-  const { data: prodsRes } = useGetProductsQuery({});
+  const { data: prodsRes, isLoading: prodsLoading, isError: prodsError } = useGetProductsQuery({});
   const products: any[] = prodsRes?.data || prodsRes || [];
 
   const [removeFromRestockQueue] = useRemoveFromRestockQueueMutation();
@@ -35,7 +35,7 @@ export default function RestockPage() {
     // Instead of restockProduct, use updateProduct or your dedicated endpoint
     const product = products.find((p) => p.id === productId);
     if (product) {
-      await updateProduct({ id: productId, stock: product.stock + amount }).unwrap();
+      await updateProduct({ id: productId, stockQty: product.stockQty + amount }).unwrap();
     }
     
     await removeFromRestockQueue(queueId).unwrap();
@@ -44,6 +44,28 @@ export default function RestockPage() {
     setRestockAmounts((prev) => { const n = { ...prev }; delete n[productId]; return n; });
     setTimeout(() => setSuccessIds((prev) => prev.filter((id) => id !== productId)), 2000);
   };
+
+  if (queueLoading || prodsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+        <RefreshCw size={40} className="text-gray-600 mb-4 animate-spin-slow" />
+        <p className="text-gray-400 font-medium tracking-tighter">Scanning inventory for restock needs...</p>
+      </div>
+    );
+  }
+
+  if (queueError || prodsError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+          <AlertTriangle size={24} className="text-red-500" />
+        </div>
+        <h3 className="text-white font-semibold">Queue Unavailable</h3>
+        <p className="text-sm text-gray-400 mt-1 mb-4">Could not load the restock queue.</p>
+        <button onClick={() => window.location.reload()} className="btn-secondary">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -81,11 +103,12 @@ export default function RestockPage() {
       {restockQueue.length > 0 ? (
         <div className="space-y-3">
           {restockQueue.map((item) => {
-            const priority = item.priority ?? "Low";
-            const { bg, text, border } = PRIORITY_CONFIG[priority];
+            const priority = (item.priority || "Low") as keyof typeof PRIORITY_CONFIG;
+            const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG.Low;
+            const { bg, text, border } = config;
             const product = products.find((p) => p.id === item.productId);
-            const currentStock = item.currentStock ?? item.product?.stock ?? 0;
-            const minThreshold = item.minThreshold ?? item.product?.minThreshold ?? 1;
+            const currentStock = Number(item.currentStock ?? item.product?.stockQty ?? 0);
+            const minThreshold = Number(item.minStockThreshold ?? item.product?.minStockThreshold ?? 1);
             const pct = (currentStock / minThreshold) * 100;
             const isSuccess = successIds.includes(item.productId);
 
@@ -102,7 +125,7 @@ export default function RestockPage() {
                     <div>
                       <p className="font-semibold text-white">{item.productName ?? item.product?.name ?? "Unknown Product"}</p>
                       <p className="text-xs" style={{ color: "oklch(0.55 0.01 260)" }}>
-                        {product?.category ?? "Unknown"} • Min: {minThreshold} units
+                        {(typeof product?.category === "object" ? product?.category?.name : product?.category) ?? "Unknown"} • Min: {minThreshold} units
                       </p>
                     </div>
                   </div>

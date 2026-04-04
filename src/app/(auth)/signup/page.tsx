@@ -4,14 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, User, Boxes, AlertCircle } from "lucide-react";
 import { useDispatch } from "react-redux";
-import { useSignupMutation, useLoginMutation } from "@/redux/api/apiSlice";
+import { useSignupMutation, useLoginMutation, useLazyGetUserMeQuery } from "@/redux/api/apiSlice";
 import { setCredentials } from "@/redux/features/authSlice";
+import { LogIn, UserPlus } from "lucide-react";
 
 export default function SignupPage() {
   const router = useRouter();
   const dispatch = useDispatch();
   const [signup] = useSignupMutation();
   const [login] = useLoginMutation();
+  const [getUserMe] = useLazyGetUserMeQuery();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -32,8 +34,18 @@ export default function SignupPage() {
       // Auto login on successful signup
       const payload = await login({ email, password }).unwrap();
       const token = payload?.data?.accessToken || payload?.accessToken;
+
       if (token) {
+        localStorage.setItem("accessToken", token);
         dispatch(setCredentials({ user: payload?.data?.user || payload?.user || null, accessToken: token }));
+
+        // Fetch full profile to get latest info (like role or id)
+        try {
+          const userRes = await getUserMe(undefined).unwrap();
+          const userObj = userRes?.data || userRes;
+          dispatch(setCredentials({ user: userObj, accessToken: token }));
+        } catch (fErr) { console.error(fErr); }
+
         router.push("/dashboard");
       } else {
         router.push("/login");
@@ -156,8 +168,12 @@ export default function SignupPage() {
               </div>
 
               <button id="signup-btn" onClick={handleSignup} disabled={loading}
-                className="btn-primary w-full py-3 mt-2 text-base">
-                {loading ? "Creating account..." : "Create Account"}
+                className="btn-primary w-full py-3 mt-2 text-base flex items-center justify-center gap-2">
+                {loading ? "Creating account..." : (
+                  <>
+                    <UserPlus size={18} /> Create Account
+                  </>
+                )}
               </button>
 
               <p className="text-center text-sm" style={{ color: "oklch(0.50 0.01 260)" }}>

@@ -19,10 +19,10 @@ const CATEGORY_COLORS = [
 ];
 
 export default function CategoriesPage() {
-  const { data: catsRes } = useGetCategoriesQuery({});
+  const { data: catsRes, isLoading: catsLoading, isError: catsError } = useGetCategoriesQuery({});
   const categories = catsRes?.data || catsRes || [];
 
-  const { data: prodsRes } = useGetProductsQuery({});
+  const { data: prodsRes, isLoading: prodsLoading, isError: prodsError } = useGetProductsQuery({});
   const products = prodsRes?.data || prodsRes || [];
 
   const [addCategory] = useAddCategoryMutation();
@@ -49,7 +49,31 @@ export default function CategoriesPage() {
   };
 
   const productCountByCategory = (catName: string) =>
-    products.filter((p: any) => p.category === catName || p.categoryId === catName).length;
+    products.filter((p: any) => {
+      const pCat = typeof p.category === "object" ? p.category.name : p.category;
+      return pCat === catName || p.categoryId === catName;
+    }).length;
+
+  if (catsLoading || prodsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+        <Tags size={40} className="text-gray-600 mb-4 animate-bounce" />
+        <p className="text-gray-400 font-medium">Categorizing your data...</p>
+      </div>
+    );
+  }
+
+  if (catsError || prodsError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+          <X size={24} className="text-red-500" />
+        </div>
+        <h3 className="text-white font-semibold">Categories unavailable</h3>
+        <button onClick={() => window.location.reload()} className="btn-secondary mt-4">Retry</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -106,7 +130,7 @@ export default function CategoriesPage() {
         {categories.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {categories.map((catObj: any, idx: number) => {
-              const cat = catObj.name || catObj;
+              const cat = typeof catObj === "object" ? (catObj.name || "Unnamed") : catObj;
               const catId = catObj.id || catObj;
               const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
               const count = productCountByCategory(cat);

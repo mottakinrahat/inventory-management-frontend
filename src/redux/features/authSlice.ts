@@ -1,16 +1,19 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface AuthState {
-  accessToken: any;
+  token: any;
+  accessToken: string | null;
   user: any | null;
-  token: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
-  token: typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null,
+  // ✅ Single token field — reads from localStorage on startup for refresh survival
+  accessToken: typeof window !== 'undefined'
+    ? localStorage.getItem('accessToken')
+    : null,
+  token: undefined
 };
-console.log(initialState)
 
 const authSlice = createSlice({
   name: 'auth',
@@ -21,14 +24,15 @@ const authSlice = createSlice({
       action: PayloadAction<{ user: any; accessToken: string }>
     ) => {
       state.user = action.payload.user;
-      state.token = action.payload.accessToken;
+      // ✅ Saves to .accessToken — matches what apiSlice.prepareHeaders reads
+      state.accessToken = action.payload.accessToken;
       if (typeof window !== 'undefined') {
         localStorage.setItem('accessToken', action.payload.accessToken);
       }
     },
     logout: (state) => {
       state.user = null;
-      state.token = null;
+      state.accessToken = null;
       if (typeof window !== 'undefined') {
         localStorage.removeItem('accessToken');
       }
@@ -37,5 +41,4 @@ const authSlice = createSlice({
 });
 
 export const { setCredentials, logout } = authSlice.actions;
-
 export default authSlice.reducer;

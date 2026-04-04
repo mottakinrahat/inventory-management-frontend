@@ -18,7 +18,9 @@ import {
 } from "lucide-react";
 
 function timeAgo(dateOrStr: Date | string): string {
+  if (!dateOrStr) return "N/A";
   const date = typeof dateOrStr === "string" ? new Date(dateOrStr) : dateOrStr;
+  if (!date || isNaN(date.getTime())) return "N/A";
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
@@ -37,16 +39,16 @@ const LOG_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { data: ordersRes } = useGetOrdersQuery({});
+  const { data: ordersRes, isLoading: ordersLoading, isError: ordersError } = useGetOrdersQuery({});
   const orders: any[] = ordersRes?.data || ordersRes || [];
 
-  const { data: prodsRes } = useGetProductsQuery({});
+  const { data: prodsRes, isLoading: prodsLoading, isError: prodsError } = useGetProductsQuery({});
   const products: any[] = prodsRes?.data || prodsRes || [];
 
-  const { data: queueRes } = useGetRestockQueueQuery({});
+  const { data: queueRes, isLoading: queueLoading, isError: queueError } = useGetRestockQueueQuery({});
   const restockQueue: any[] = queueRes?.data || queueRes || [];
 
-  const { data: logsRes } = useGetActivityLogsQuery({});
+  const { data: logsRes, isLoading: logsLoading, isError: logsError } = useGetActivityLogsQuery({});
   const activityLogs: any[] = logsRes?.data || logsRes || [];
 
   const today = new Date();
@@ -92,6 +94,30 @@ export default function DashboardPage() {
       trend: null,
     },
   ];
+
+  if (ordersLoading || prodsLoading || queueLoading || logsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 animate-fadeIn">
+        <TrendingUp size={40} className="text-[#9d50bb] mb-4 animate-pulse" />
+        <p className="text-gray-400 font-medium tracking-wide">Crunching latest stats...</p>
+      </div>
+    );
+  }
+
+  if (ordersError || prodsError || queueError || logsError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center animate-fadeIn">
+        <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center mb-5 border border-red-500/20">
+          <AlertTriangle size={28} className="text-red-500" />
+        </div>
+        <h3 className="text-white font-bold text-lg">Dashboard Error</h3>
+        <p className="text-sm text-gray-400 mt-2 mb-8 max-w-xs mx-auto leading-relaxed">
+          Some data failed to load. The server might be temporarily unavailable.
+        </p>
+        <button onClick={() => window.location.reload()} className="btn-secondary">Retry Refresh</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -159,9 +185,9 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3">
             {products.slice(0, 6).map((p) => {
-              const pct = Math.min(100, (p.stock / Math.max(p.minThreshold * 2, 1)) * 100);
-              const isLow = p.stock < p.minThreshold;
-              const barColor = p.stock === 0
+              const pct = Math.min(100, (p.stockQty / Math.max(p.minStockThreshold * 2, 1)) * 100);
+              const isLow = p.stockQty < p.minStockThreshold;
+              const barColor = p.stockQty === 0
                 ? "oklch(0.60 0.22 25)"
                 : isLow
                 ? "oklch(0.72 0.18 45)"
@@ -175,7 +201,7 @@ export default function DashboardPage() {
                       <span className="text-white font-medium">{p.name}</span>
                     </div>
                     <span className="text-xs font-medium" style={{ color: isLow ? "oklch(0.72 0.18 45)" : "oklch(0.68 0.20 170)" }}>
-                      {p.stock === 0 ? "Out of Stock" : `${p.stock} left`}
+                      {p.stockQty === 0 ? "Out of Stock" : `${p.stockQty} left`}
                     </span>
                   </div>
                   <div className="h-1.5 rounded-full" style={{ background: "oklch(0.20 0.02 260)" }}>

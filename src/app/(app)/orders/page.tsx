@@ -5,6 +5,8 @@ import {
   Plus, ShoppingCart, X, Trash2, ChevronDown, Search,
   AlertCircle, Check, Package
 } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
+import { RootState } from "@/redux/store";
 import { OrderItem, OrderStatus } from "@/types";
 import { 
   useGetProductsQuery,
@@ -34,11 +36,13 @@ function timeAgo(dateOrStr: Date | string): string {
 }
 
 export default function OrdersPage() {
-  const { data: prodsRes } = useGetProductsQuery({});
-  const products = prodsRes?.data || prodsRes || [];
+  const { data: prodsRes, isLoading: prodsLoading, isError: prodsError } = useGetProductsQuery({});
+  const products: any[] = prodsRes?.data || prodsRes || [];
 
-  const { data: ordersRes } = useGetOrdersQuery({});
-  const orders = ordersRes?.data || ordersRes || [];
+  const { data: ordersRes, isLoading: ordersLoading, isError: ordersError } = useGetOrdersQuery({});
+  const orders: any[] = ordersRes?.data || ordersRes || [];
+
+  const currentUser = useSelector((state: RootState) => state.auth.user);
 
   const [createOrder] = useCreateOrderMutation();
   const [updateOrderStatus] = useUpdateOrderStatusMutation();
@@ -75,7 +79,7 @@ export default function OrdersPage() {
     }
     setItems((prev) => [
       ...prev,
-      { productId: product.id, productName: product.name, quantity: qty, unitPrice: product.price },
+      { productId: product.id, productName: product.name, quantity: qty, price: product.price },
     ]);
     setSelProduct(""); setSelQty("1");
   };
@@ -84,28 +88,70 @@ export default function OrdersPage() {
     setItems((prev) => prev.filter((i) => i.productId !== productId));
   };
 
-  const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
+  const total = items.reduce((s, i) => s + i.quantity * i.price, 0);
 
   const handleCreateOrder = async () => {
     setFormError("");
     if (!customerName.trim()) { setFormError("Customer name is required."); return; }
     if (items.length === 0) { setFormError("Add at least one product to the order."); return; }
     try {
-      await createOrder({ customerName: customerName.trim(), items }).unwrap();
+      // ✅ Include totalPrice and ensure items match the required schema
+      const payload = {
+        customerName: customerName.trim(),
+        totalPrice: total,
+        createdById: currentUser?.id,
+        items: items.map(it => ({
+          productId: it.productId,
+          quantity: it.quantity,
+          unitPrice: it.price,
+          subtotal: it.quantity * it.price
+        }))
+      };
+      await createOrder(payload).unwrap();
       setFormSuccess(`Order created successfully!`);
       setCustomerName(""); setItems([]);
       setTimeout(() => { setFormSuccess(""); setShowForm(false); }, 1500);
     } catch (err: any) {
-      setFormError(err?.data?.message || err?.error || "Failed to create order.");
+      console.error("Order Creation Error:", err);
+      // Detailed error if available, else generic message
+      const msg = err?.data?.message || err?.data?.error || err?.error || "Failed to create order.";
+      setFormError(msg);
     }
   };
 
   const filtered = orders.filter((o: any) => {
-    const matchSearch = o.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      String(o.id).includes(search);
+    // Show only orders created by the current user
+    const isMine = o.createdById === currentUser?.id;
+    if (!isMine) return false;
+
+    const matchSearch = (o.customerName || "").toLowerCase().includes(search.toLowerCase()) ||
+      String(o.id).includes(search) || (o.orderNumber || "").includes(search);
     const matchStatus = !filterStatus || o.status === filterStatus;
     return matchSearch && matchStatus;
   });
+
+  if (prodsLoading || ordersLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 animate-pulse">
+        <ShoppingCart size={40} className="text-gray-600 mb-4 animate-bounce" />
+        <p className="text-gray-400 font-medium">Processing orders...</p>
+      </div>
+    );
+  }
+
+  if (prodsError || ordersError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-center">
+        <div className="w-12 h-12 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
+          <X size={24} className="text-red-500" />
+        </div>
+        <h3 className="text-white font-semibold flex items-center justify-center gap-2">
+           <AlertCircle size={18} className="text-red-500" /> Order data unavailable
+        </h3>
+        <button onClick={() => window.location.reload()} className="btn-secondary mt-6">Try Reloading</button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -165,7 +211,7 @@ export default function OrdersPage() {
                 <option value="">Select Product</option>
                 {activeProducts.map((p: any) => (
                   <option key={p.id} value={String(p.id)}>
-                    {p.name} — ${p.price} ({p.stock} left)
+                    {p.name} — ${p.price} ({p.stockQty} left)
                   </option>
                 ))}
               </select>
@@ -195,8 +241,8 @@ export default function OrdersPage() {
                     <tr key={item.productId}>
                       <td className="text-white font-medium">{item.productName}</td>
                       <td className="text-gray-300">{item.quantity}</td>
-                      <td className="text-gray-300">${item.unitPrice.toFixed(2)}</td>
-                      <td className="font-semibold text-white">${(item.quantity * item.unitPrice).toFixed(2)}</td>
+                      <td className="text-gray-300">${item.price.toFixed(2)}</td>
+                      <td className="font-semibold text-white">${(item.quantity * item.price).toFixed(2)}</td>
                       <td>
                         <button onClick={() => removeItem(item.productId)}
                           className="w-6 h-6 rounded-lg flex items-center justify-center"
@@ -265,16 +311,19 @@ export default function OrdersPage() {
                   return (
                     <tr key={order.id}>
                       <td className="font-semibold" style={{ color: "oklch(0.62 0.22 270)" }}>
-                        #{order.id}
+                        #{order.orderNumber || order.id}
                       </td>
                       <td className="text-white font-medium">{order.customerName}</td>
                       <td>
                         <div className="flex flex-col gap-0.5">
-                          {order.items.map((item: any, i: number) => (
-                            <span key={i} className="text-xs text-gray-400">
-                              {item.productName} × {item.quantity}
-                            </span>
-                          ))}
+                          {order.items.map((item: any, i: number) => {
+                            const pName = typeof item.product === "object" ? (item.product.name || "Product") : (item.productName || "Product");
+                            return (
+                              <span key={i} className="text-xs text-gray-400">
+                                {pName} × {item.quantity}
+                              </span>
+                            );
+                          })}
                         </div>
                       </td>
                       <td className="font-bold text-white">${order.totalPrice.toFixed(2)}</td>
@@ -318,7 +367,7 @@ export default function OrdersPage() {
   );
 }
 
-function StatusDropdown({ order, onUpdate }: { order: any; onUpdate: (id: number, status: OrderStatus) => Promise<any> }) {
+function StatusDropdown({ order, onUpdate }: { order: any; onUpdate: (data: { id: number; status: OrderStatus }) => Promise<any> }) {
   const [open, setOpen] = useState(false);
   const nextStatusesDict: Record<OrderStatus, OrderStatus[]> = {
     Pending: ["Confirmed", "Shipped"],
@@ -345,7 +394,7 @@ function StatusDropdown({ order, onUpdate }: { order: any; onUpdate: (id: number
             const { text } = STATUS_CONFIG[s];
             return (
               <button key={s} id={`set-status-${order.id}-${s.toLowerCase()}`}
-                onClick={async () => { await onUpdate(order.id, s); setOpen(false); }}
+                onClick={async () => { await onUpdate({ id: order.id, status: s }); setOpen(false); }}
                 className="w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-white/5"
                 style={{ color: text }}>
                 → {s}

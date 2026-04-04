@@ -90,10 +90,12 @@ export default function Sidebar() {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white shrink-0"
               style={{ background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.62 0.22 290))" }}>
-              {currentUser.name?.[0] ?? "U"}
+              {typeof currentUser.name === "object" ? (currentUser.name.name?.[0] ?? "U") : (currentUser.name?.[0] ?? "U")}
             </div>
             <div className="min-w-0">
-              <p className="text-sm font-medium truncate text-white">{currentUser.name}</p>
+              <p className="text-sm font-medium truncate text-white">
+                {typeof currentUser.name === "object" ? currentUser.name.name : currentUser.name}
+              </p>
               <p className="text-xs truncate" style={{ color: "oklch(0.55 0.01 260)" }}>
                 {currentUser.role}
               </p>

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Boxes, AlertCircle } from "lucide-react";
+import { Mail, Lock, Boxes, AlertCircle, LogIn, Sparkles } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { useLoginMutation, useLazyGetUserMeQuery } from "@/redux/api/apiSlice";
 import { setCredentials } from "@/redux/features/authSlice";
@@ -201,8 +201,13 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              <button id="login-btn" onClick={handleLogin} disabled={loading} className="btn-primary w-full py-3 mt-2 text-base">
-                {loading ? "Signing in..." : "Sign In"}
+               <button id="login-btn" onClick={handleLogin} disabled={loading} 
+                className="btn-primary w-full py-3 mt-2 text-base flex items-center justify-center gap-2">
+                {loading ? "Signing in..." : (
+                  <>
+                    <LogIn size={18} /> Sign In
+                  </>
+                )}
               </button>
 
               <div className="relative flex items-center gap-3">

@@ -8,7 +8,8 @@ import {
   useGetCategoriesQuery, 
   useAddProductMutation, 
   useUpdateProductMutation, 
-  useRemoveProductMutation 
+  useRemoveProductMutation,
+  useGetUserMeQuery 
 } from "@/redux/api/apiSlice";
 
 const STATUS_STYLES: Record<string, [string, string]> = {
@@ -16,21 +17,30 @@ const STATUS_STYLES: Record<string, [string, string]> = {
   "Out of Stock": ["oklch(0.60 0.22 25 / 0.15)", "oklch(0.60 0.22 25)"],
 };
 
+const getCategoryName = (c: any) => {
+  if (!c) return "Uncategorized";
+  return typeof c === "object" ? c.name : c;
+};
+
 export default function ProductsPage() {
-  const { data: prodsRes } = useGetProductsQuery({});
+  const { data: prodsRes, isLoading: prodsLoading, isError: prodsError } = useGetProductsQuery({});
   const products: Product[] = prodsRes?.data || prodsRes || [];
-  const { data: catsRes } = useGetCategoriesQuery({});
+  
+  const { data: catsRes, isLoading: catsLoading } = useGetCategoriesQuery({});
   const categories = catsRes?.data || catsRes || [];
 
   const [addProduct] = useAddProductMutation();
   const [updateProduct] = useUpdateProductMutation();
   const [removeProduct] = useRemoveProductMutation();
+  
+  const { data: userRes } = useGetUserMeQuery({});
+  const currentUser = userRes?.data || userRes;
 
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const emptyForm = {
@@ -39,9 +49,14 @@ export default function ProductsPage() {
   const [form, setForm] = useState(emptyForm);
 
   const filtered = products.filter((p) => {
+    // Show only products created by the current user
+    const isMine = p.createdById === currentUser?.id;
+    if (!isMine) return false;
+
+    const catName = getCategoryName(p.category);
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.category.toLowerCase().includes(search.toLowerCase());
-    const matchCat = !filterCat || p.category === filterCat;
+      catName.toLowerCase().includes(search.toLowerCase());
+    const matchCat = !filterCat || catName === filterCat;
     const matchStatus = !filterStatus || p.status === filterStatus;
     return matchSearch && matchCat && matchStatus;
   });
@@ -52,15 +67,19 @@ export default function ProductsPage() {
       setError("All fields are required.");
       return;
     }
+    // Find category ID from the selected name
+    const selectedCat = categories.find((c: any) => (c.name || c) === form.category);
+    const categoryId = selectedCat?.id || form.category;
+
     const data = {
       name: form.name.trim(),
-      category: form.category,
+      categoryId,
       price: parseFloat(form.price),
-      stock: parseInt(form.stock),
-      minThreshold: parseInt(form.minThreshold),
-      status: form.status,
+      stockQty: parseInt(form.stock),
+      minStockThreshold: parseInt(form.minThreshold),
+      createdById: currentUser?.id,
     };
-
+   console.log(data)
     try {
       if (editingId !== null) {
         await updateProduct({ id: editingId, ...data }).unwrap();
@@ -78,10 +97,10 @@ export default function ProductsPage() {
   const startEdit = (p: Product) => {
     setForm({
       name: p.name,
-      category: p.category,
+      category: getCategoryName(p.category),
       price: String(p.price),
-      stock: String(p.stock),
-      minThreshold: String(p.minThreshold),
+      stock: String(p.stockQty),
+      minThreshold: String(p.minStockThreshold),
       status: p.status,
     });
     setEditingId(p.id);
@@ -96,6 +115,38 @@ export default function ProductsPage() {
     setError("");
   };
 
+  const userCatCount = new Set(filtered.map(p => getCategoryName(p.category))).size;
+
+  if (prodsLoading || catsLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 animate-fadeIn">
+        <div className="w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-all"
+          style={{ background: "oklch(0.62 0.22 270 / 0.1)" }}>
+          <Package size={24} className="text-[#9d50bb] animate-bounce" />
+        </div>
+        <p className="text-gray-400 font-medium tracking-wide">Loading inventory data...</p>
+      </div>
+    );
+  }
+
+  if (prodsError) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 text-center animate-fadeIn">
+        <div className="w-14 h-14 bg-red-500/10 rounded-2xl flex items-center justify-center mb-5 border border-red-500/20">
+          <X size={28} className="text-red-500" />
+        </div>
+        <h3 className="text-white font-bold text-lg">Unable to load products</h3>
+        <p className="text-sm text-gray-400 mt-2 mb-8 max-w-xs mx-auto leading-relaxed">
+          We encountered a connection issue while fetching the product list. Please check your network.
+        </p>
+        <button onClick={() => window.location.reload()} 
+          className="btn-primary" style={{ background: "oklch(0.60 0.22 25)", boxShadow: "0 10px 20px -5px oklch(0.60 0.22 25 / 0.4)" }}>
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fadeInUp">
       {/* Header */}
@@ -103,7 +154,7 @@ export default function ProductsPage() {
         <div>
           <h1 className="page-title">Products</h1>
           <p className="text-sm mt-1" style={{ color: "oklch(0.55 0.01 260)" }}>
-            {products.length} products across {categories.length} categories
+            {filtered.length} products across {userCatCount} categories
           </p>
         </div>
         <button id="add-product-btn" onClick={() => { setShowForm(true); setEditingId(null); setForm(emptyForm); setError(""); }}
@@ -142,7 +193,11 @@ export default function ProductsPage() {
               <select id="product-category" className="select-field"
                 value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 <option value="">Select Category</option>
-                {categories.map((c: any) => <option key={c.id || c} value={c.name || c}>{c.name || c}</option>)}
+                 {categories.map((c: any) => {
+                   const name = getCategoryName(c);
+                   const id = c.id || c;
+                   return <option key={id} value={name}>{name}</option>;
+                 })}
               </select>
             </div>
             <div>
@@ -192,7 +247,11 @@ export default function ProductsPage() {
         <select className="select-field w-auto min-w-[140px]"
           value={filterCat} onChange={(e) => setFilterCat(e.target.value)}>
           <option value="">All Categories</option>
-          {categories.map((c: any) => <option key={c.id || c} value={c.name || c}>{c.name || c}</option>)}
+          {categories.map((c: any) => {
+            const name = getCategoryName(c);
+            const id = c.id || c;
+            return <option key={id} value={name}>{name}</option>;
+          })}
         </select>
         <select className="select-field w-auto min-w-[130px]"
           value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
@@ -221,7 +280,7 @@ export default function ProductsPage() {
               </thead>
               <tbody>
                 {filtered.map((p) => {
-                  const isLow = p.stock < p.minThreshold && p.stock > 0;
+                  const isLow = p.stockQty < p.minStockThreshold && p.stockQty > 0;
                   const [bg, color] = STATUS_STYLES[p.status] ?? ["", ""];
                   return (
                     <tr key={p.id}>
@@ -238,19 +297,19 @@ export default function ProductsPage() {
                       <td>
                         <span className="px-2.5 py-1 rounded-lg text-xs"
                           style={{ background: "oklch(0.20 0.03 265)", color: "oklch(0.78 0.12 265)" }}>
-                          {p.category}
+                          {getCategoryName(p.category)}
                         </span>
                       </td>
                       <td className="font-medium text-white">${p.price.toFixed(2)}</td>
                       <td>
                         <span className="font-semibold" style={{
-                          color: p.stock === 0
+                          color: p.stockQty === 0
                             ? "oklch(0.60 0.22 25)"
                             : isLow
                             ? "oklch(0.72 0.18 45)"
                             : "oklch(0.68 0.20 170)"
                         }}>
-                          {p.stock}
+                          {p.stockQty}
                         </span>
                         {isLow && (
                           <span className="ml-1.5 text-xs px-1.5 py-0.5 rounded"
@@ -259,7 +318,7 @@ export default function ProductsPage() {
                           </span>
                         )}
                       </td>
-                      <td className="text-gray-400">{p.minThreshold}</td>
+                      <td className="text-gray-400">{p.minStockThreshold}</td>
                       <td>
                         <span className="badge text-xs" style={{ background: bg, color }}>
                           {p.status}

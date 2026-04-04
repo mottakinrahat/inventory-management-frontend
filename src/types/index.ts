@@ -1,13 +1,15 @@
 export type ProductStatus = "Active" | "Out of Stock";
 
 export interface Product {
-  id: number;
+  id: string; // Changed to string (cuid) matching schema
   name: string;
-  category: string;
+  categoryId: string;
+  category: string | { name: string; id: string };
   price: number;
-  stock: number;
-  minThreshold: number;
+  stockQty: number;
+  minStockThreshold: number;
   status: ProductStatus;
+  createdById: string;
 }
 
 export type OrderStatus =
@@ -21,7 +23,7 @@ export interface OrderItem {
   productId: number;
   productName: string;
   quantity: number;
-  unitPrice: number;
+  price: number;
 }
 
 export interface Order {
@@ -34,12 +36,12 @@ export interface Order {
 }
 
 export interface RestockItem {
-  id: number;
-  productId: number;
-  product: { name: string; stock: number; minThreshold: number };
+  id: string;
+  productId: string;
+  product: { name: string; stockQty: number; minStockThreshold: number };
   productName?: string;
   currentStock?: number;
-  minThreshold?: number;
+  minStockThreshold?: number;
   priority?: "High" | "Medium" | "Low";
 }
 
