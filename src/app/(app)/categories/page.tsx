@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { Plus, Tags, X, Trash2, Check, Layers } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { 
+  useGetCategoriesQuery, 
+  useAddCategoryMutation, 
+  useRemoveCategoryMutation, 
+  useGetProductsQuery 
+} from "@/redux/api/apiSlice";
 
 const CATEGORY_COLORS = [
   "oklch(0.62 0.22 270)",
@@ -14,7 +19,15 @@ const CATEGORY_COLORS = [
 ];
 
 export default function CategoriesPage() {
-  const { categories, addCategory, removeCategory, products } = useAppStore();
+  const { data: catsRes } = useGetCategoriesQuery({});
+  const categories = catsRes?.data || catsRes || [];
+
+  const { data: prodsRes } = useGetProductsQuery({});
+  const products = prodsRes?.data || prodsRes || [];
+
+  const [addCategory] = useAddCategoryMutation();
+  const [removeCategory] = useRemoveCategoryMutation();
+
   const [newCat, setNewCat] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -22,19 +35,21 @@ export default function CategoriesPage() {
   const handleAdd = async () => {
     setError(""); setSuccess("");
     if (!newCat.trim()) { setError("Category name cannot be empty."); return; }
-    if (categories.find(c => (c.name || c) === newCat.trim())) {
+    if (categories.find((c: any) => (c.name || c) === newCat.trim())) {
       setError(`"${newCat.trim()}" category already exists.`); return;
     }
-    const ok = await addCategory(newCat.trim());
-    if (ok) {
+    try {
+      await addCategory({ name: newCat.trim() }).unwrap();
       setSuccess(`Category "${newCat.trim()}" added successfully.`);
       setNewCat("");
       setTimeout(() => setSuccess(""), 3000);
+    } catch {
+      setError("Failed to add category.");
     }
   };
 
   const productCountByCategory = (catName: string) =>
-    products.filter((p) => p.category === catName || (p as any).categoryId === catName).length;
+    products.filter((p: any) => p.category === catName || p.categoryId === catName).length;
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -90,7 +105,7 @@ export default function CategoriesPage() {
 
         {categories.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((catObj, idx) => {
+            {categories.map((catObj: any, idx: number) => {
               const cat = catObj.name || catObj;
               const catId = catObj.id || catObj;
               const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
@@ -130,7 +145,7 @@ export default function CategoriesPage() {
                   <div className="mt-4">
                     <div className="h-1 rounded-full" style={{ background: "oklch(0.20 0.02 260)" }}>
                       <div className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (count / Math.max(...categories.map(c => productCountByCategory(c.name || c))) * 100) || 0)}%`, background: color }} />
+                        style={{ width: `${Math.min(100, (count / Math.max(...categories.map((c: any) => productCountByCategory(c.name || c))) * 100) || 0)}%`, background: color }} />
                     </div>
                   </div>
                 </div>

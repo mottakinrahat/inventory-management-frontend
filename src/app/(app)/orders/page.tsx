@@ -5,7 +5,14 @@ import {
   Plus, ShoppingCart, X, Trash2, ChevronDown, Search,
   AlertCircle, Check, Package
 } from "lucide-react";
-import { useAppStore, Order, OrderItem, OrderStatus } from "@/lib/store";
+import { OrderItem, OrderStatus } from "@/types";
+import { 
+  useGetProductsQuery,
+  useGetOrdersQuery,
+  useCreateOrderMutation,
+  useUpdateOrderStatusMutation,
+  useCancelOrderMutation
+} from "@/redux/api/apiSlice";
 
 const STATUS_CONFIG: Record<OrderStatus, { bg: string; text: string; label: string }> = {
   Pending: { bg: "oklch(0.72 0.18 45 / 0.15)", text: "oklch(0.72 0.18 45)", label: "Pending" },
@@ -27,7 +34,15 @@ function timeAgo(dateOrStr: Date | string): string {
 }
 
 export default function OrdersPage() {
-  const { products, orders, createOrder, updateOrderStatus, cancelOrder } = useAppStore();
+  const { data: prodsRes } = useGetProductsQuery({});
+  const products = prodsRes?.data || prodsRes || [];
+
+  const { data: ordersRes } = useGetOrdersQuery({});
+  const orders = ordersRes?.data || ordersRes || [];
+
+  const [createOrder] = useCreateOrderMutation();
+  const [updateOrderStatus] = useUpdateOrderStatusMutation();
+  const [cancelOrder] = useCancelOrderMutation();
 
   const [showForm, setShowForm] = useState(false);
   const [customerName, setCustomerName] = useState("");
@@ -40,11 +55,11 @@ export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState<OrderStatus | "">("");
 
-  const activeProducts = products.filter((p) => p.status === "Active");
+  const activeProducts = products.filter((p: any) => p.status === "Active");
 
   const addItemToOrder = () => {
     setFormError("");
-    const product = products.find((p) => String(p.id) === selProduct);
+    const product = products.find((p: any) => String(p.id) === selProduct);
     if (!product) { setFormError("Please select a product."); return; }
     if (product.status === "Out of Stock") {
       setFormError(`"${product.name}" is currently unavailable.`); return;
@@ -75,14 +90,17 @@ export default function OrdersPage() {
     setFormError("");
     if (!customerName.trim()) { setFormError("Customer name is required."); return; }
     if (items.length === 0) { setFormError("Add at least one product to the order."); return; }
-    const result = await createOrder({ customerName: customerName.trim(), items });
-    if (!result.success) { setFormError(result.error ?? "Failed to create order."); return; }
-    setFormSuccess(`Order created successfully!`);
-    setCustomerName(""); setItems([]);
-    setTimeout(() => { setFormSuccess(""); setShowForm(false); }, 1500);
+    try {
+      await createOrder({ customerName: customerName.trim(), items }).unwrap();
+      setFormSuccess(`Order created successfully!`);
+      setCustomerName(""); setItems([]);
+      setTimeout(() => { setFormSuccess(""); setShowForm(false); }, 1500);
+    } catch (err: any) {
+      setFormError(err?.data?.message || err?.error || "Failed to create order.");
+    }
   };
 
-  const filtered = orders.filter((o) => {
+  const filtered = orders.filter((o: any) => {
     const matchSearch = o.customerName.toLowerCase().includes(search.toLowerCase()) ||
       String(o.id).includes(search);
     const matchStatus = !filterStatus || o.status === filterStatus;
@@ -145,7 +163,7 @@ export default function OrdersPage() {
               <select id="order-product-select" className="select-field flex-1 min-w-[160px]"
                 value={selProduct} onChange={(e) => setSelProduct(e.target.value)}>
                 <option value="">Select Product</option>
-                {activeProducts.map((p) => (
+                {activeProducts.map((p: any) => (
                   <option key={p.id} value={String(p.id)}>
                     {p.name} — ${p.price} ({p.stock} left)
                   </option>
@@ -242,8 +260,8 @@ export default function OrdersPage() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((order) => {
-                  const { bg, text } = STATUS_CONFIG[order.status];
+                {filtered.map((order: any) => {
+                  const { bg, text } = STATUS_CONFIG[order.status as OrderStatus] || STATUS_CONFIG.Pending;
                   return (
                     <tr key={order.id}>
                       <td className="font-semibold" style={{ color: "oklch(0.62 0.22 270)" }}>
@@ -252,7 +270,7 @@ export default function OrdersPage() {
                       <td className="text-white font-medium">{order.customerName}</td>
                       <td>
                         <div className="flex flex-col gap-0.5">
-                          {order.items.map((item, i) => (
+                          {order.items.map((item: any, i: number) => (
                             <span key={i} className="text-xs text-gray-400">
                               {item.productName} × {item.quantity}
                             </span>
@@ -300,7 +318,7 @@ export default function OrdersPage() {
   );
 }
 
-function StatusDropdown({ order, onUpdate }: { order: Order; onUpdate: (id: number, status: OrderStatus) => Promise<boolean> }) {
+function StatusDropdown({ order, onUpdate }: { order: any; onUpdate: (id: number, status: OrderStatus) => Promise<any> }) {
   const [open, setOpen] = useState(false);
   const nextStatusesDict: Record<OrderStatus, OrderStatus[]> = {
     Pending: ["Confirmed", "Shipped"],
@@ -309,7 +327,7 @@ function StatusDropdown({ order, onUpdate }: { order: Order; onUpdate: (id: numb
     Delivered: [],
     Cancelled: [],
   };
-  const nextStatuses: OrderStatus[] = nextStatusesDict[order.status] ?? [];
+  const nextStatuses: OrderStatus[] = nextStatusesDict[order.status as OrderStatus] ?? [];
 
   if (nextStatuses.length === 0) return null;
 
@@ -323,7 +341,7 @@ function StatusDropdown({ order, onUpdate }: { order: Order; onUpdate: (id: numb
       {open && (
         <div className="absolute right-0 top-8 z-10 rounded-xl overflow-hidden shadow-xl"
           style={{ background: "oklch(0.16 0.02 260)", border: "1px solid oklch(0.25 0.03 265)", minWidth: "120px" }}>
-          {nextStatuses.map((s) => {
+          {nextStatusesDict[order.status as OrderStatus]?.map((s) => {
             const { text } = STATUS_CONFIG[s];
             return (
               <button key={s} id={`set-status-${order.id}-${s.toLowerCase()}`}

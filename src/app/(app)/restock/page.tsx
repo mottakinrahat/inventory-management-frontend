@@ -2,16 +2,28 @@
 
 import { useState } from "react";
 import { AlertTriangle, RefreshCw, X, Check, ArrowUp, Package } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { 
+  useGetRestockQueueQuery,
+  useRemoveFromRestockQueueMutation,
+  useUpdateProductMutation,
+  useGetProductsQuery
+} from "@/redux/api/apiSlice";
 
-const PRIORITY_CONFIG = {
+const PRIORITY_CONFIG: Record<string, { bg: string; text: string; border: string }> = {
   High: { bg: "oklch(0.60 0.22 25 / 0.15)", text: "oklch(0.60 0.22 25)", border: "oklch(0.60 0.22 25 / 0.3)" },
   Medium: { bg: "oklch(0.72 0.18 45 / 0.15)", text: "oklch(0.72 0.18 45)", border: "oklch(0.72 0.18 45 / 0.3)" },
   Low: { bg: "oklch(0.62 0.22 270 / 0.15)", text: "oklch(0.62 0.22 270)", border: "oklch(0.62 0.22 270 / 0.3)" },
 };
 
 export default function RestockPage() {
-  const { restockQueue, restockProduct, removeFromRestockQueue, products } = useAppStore();
+  const { data: queueRes } = useGetRestockQueueQuery({});
+  const restockQueue: any[] = queueRes?.data || queueRes || [];
+
+  const { data: prodsRes } = useGetProductsQuery({});
+  const products: any[] = prodsRes?.data || prodsRes || [];
+
+  const [removeFromRestockQueue] = useRemoveFromRestockQueueMutation();
+  const [updateProduct] = useUpdateProductMutation();
 
   const [restockAmounts, setRestockAmounts] = useState<Record<number, string>>({});
   const [successIds, setSuccessIds] = useState<number[]>([]);
@@ -19,8 +31,15 @@ export default function RestockPage() {
   const handleRestock = async (queueId: number, productId: number) => {
     const amount = parseInt(restockAmounts[productId] ?? "0");
     if (!amount || amount < 1) return;
-    await restockProduct(productId, amount);
-    await removeFromRestockQueue(queueId);
+    
+    // Instead of restockProduct, use updateProduct or your dedicated endpoint
+    const product = products.find((p) => p.id === productId);
+    if (product) {
+      await updateProduct({ id: productId, stock: product.stock + amount }).unwrap();
+    }
+    
+    await removeFromRestockQueue(queueId).unwrap();
+    
     setSuccessIds((prev) => [...prev, productId]);
     setRestockAmounts((prev) => { const n = { ...prev }; delete n[productId]; return n; });
     setTimeout(() => setSuccessIds((prev) => prev.filter((id) => id !== productId)), 2000);

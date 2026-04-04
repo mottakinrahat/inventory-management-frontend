@@ -11,7 +11,10 @@ import {
   LogOut,
   Boxes,
 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useDispatch, useSelector } from "react-redux";
+import { logout } from "@/redux/features/authSlice";
+import { useGetRestockQueueQuery } from "@/redux/api/apiSlice";
+import { RootState } from "@/redux/store";
 
 const menu = [
   { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
@@ -25,10 +28,13 @@ const menu = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { currentUser, logout, restockQueue } = useAppStore();
+  const dispatch = useDispatch();
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  const { data: queueRes } = useGetRestockQueueQuery({});
+  const restockQueue = queueRes?.data || queueRes || [];
 
   const handleLogout = () => {
-    logout();
+    dispatch(logout());
     router.push("/login");
   };
 
@@ -84,7 +90,7 @@ export default function Sidebar() {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold text-white shrink-0"
               style={{ background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.62 0.22 290))" }}>
-              {currentUser.name[0]}
+              {currentUser.name?.[0] ?? "U"}
             </div>
             <div className="min-w-0">
               <p className="text-sm font-medium truncate text-white">{currentUser.name}</p>

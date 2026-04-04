@@ -1,7 +1,9 @@
 "use client";
 
 import { Bell, Search } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useSelector } from "react-redux";
+import { useGetRestockQueueQuery } from "@/redux/api/apiSlice";
+import { RootState } from "@/redux/store";
 import { usePathname } from "next/navigation";
 
 const PAGE_TITLES: Record<string, string> = {
@@ -14,10 +16,19 @@ const PAGE_TITLES: Record<string, string> = {
 };
 
 export default function Navbar() {
-  const { currentUser, restockQueue } = useAppStore();
+  // Get user from Redux store instead of manual fetch
+  const currentUser = useSelector((state: RootState) => state.auth.user);
+  // Get restock queue from RTK Query
+  const { data: queueResponse } = useGetRestockQueueQuery({});
+  const restockQueue = queueResponse?.data || queueResponse || [];
+
   const pathname = usePathname();
   const title = PAGE_TITLES[pathname] ?? "Dashboard";
-  const hasAlerts = restockQueue.some((r) => r.priority === "High");
+  const hasAlerts = restockQueue.some((r: any) => r.priority === "High");
+
+  const displayName = currentUser?.name || currentUser?.email || "Admin";
+  
+  const avatarInitial = (displayName === "Admin" ? "A" : (displayName[0]?.toUpperCase() ?? "A"));
 
   return (
     <header className="h-16 flex items-center justify-between px-6 gap-4 border-b"
@@ -64,10 +75,10 @@ export default function Navbar() {
             style={{
               background: "linear-gradient(135deg, oklch(0.55 0.24 270), oklch(0.62 0.22 290))",
             }}>
-            {currentUser?.name?.[0] ?? "A"}
+            {avatarInitial}
           </div>
           <span className="hidden sm:block text-sm font-medium text-white">
-            {currentUser?.name ?? "Admin"}
+            {displayName}
           </span>
         </div>
       </div>

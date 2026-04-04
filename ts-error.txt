@@ -1,0 +1,2 @@
+src/app/(app)/orders/page.tsx(330,39): error TS7053: Element implicitly has an 'any' type because expression of type 'any' can't be used to index type 'Record<OrderStatus, OrderStatus[]>'.
+src/app/(auth)/login/page.tsx(31,31): error TS2554: Expected 1-2 arguments, but got 0.

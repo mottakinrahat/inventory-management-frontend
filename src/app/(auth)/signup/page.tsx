@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, User, Boxes, AlertCircle } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useDispatch } from "react-redux";
+import { useSignupMutation, useLoginMutation } from "@/redux/api/apiSlice";
+import { setCredentials } from "@/redux/features/authSlice";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signup, login } = useAppStore();
+  const dispatch = useDispatch();
+  const [signup] = useSignupMutation();
+  const [login] = useLoginMutation();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,15 +25,24 @@ export default function SignupPage() {
     if (!email.trim()) { setError("Email is required."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
-    const res = await signup({ name, email, password });
-    if (!res.success) {
-      setError(res.error || "Signup failed");
+    
+    try {
+      await signup({ name, email, password }).unwrap();
+      
+      // Auto login on successful signup
+      const payload = await login({ email, password }).unwrap();
+      const token = payload?.data?.accessToken || payload?.accessToken;
+      if (token) {
+        dispatch(setCredentials({ user: payload?.data?.user || payload?.user || null, accessToken: token }));
+        router.push("/dashboard");
+      } else {
+        router.push("/login");
+      }
+    } catch (err: any) {
+      setError(err?.data?.message || err?.error || "Signup failed");
+    } finally {
       setLoading(false);
-      return;
     }
-    // Auto login on successful signup
-    await login({ email, password });
-    router.push("/dashboard");
   };
 
   return (

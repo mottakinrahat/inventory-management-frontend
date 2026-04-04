@@ -2,7 +2,14 @@
 
 import React, { useState } from "react";
 import { Plus, Search, Pencil, Trash2, X, Check, Package } from "lucide-react";
-import { useAppStore, Product } from "@/lib/store";
+import { Product } from "@/types";
+import { 
+  useGetProductsQuery, 
+  useGetCategoriesQuery, 
+  useAddProductMutation, 
+  useUpdateProductMutation, 
+  useRemoveProductMutation 
+} from "@/redux/api/apiSlice";
 
 const STATUS_STYLES: Record<string, [string, string]> = {
   Active: ["oklch(0.68 0.20 170 / 0.15)", "oklch(0.68 0.20 170)"],
@@ -10,7 +17,14 @@ const STATUS_STYLES: Record<string, [string, string]> = {
 };
 
 export default function ProductsPage() {
-  const { categories, products, addProduct, updateProduct, removeProduct } = useAppStore();
+  const { data: prodsRes } = useGetProductsQuery({});
+  const products: Product[] = prodsRes?.data || prodsRes || [];
+  const { data: catsRes } = useGetCategoriesQuery({});
+  const categories = catsRes?.data || catsRes || [];
+
+  const [addProduct] = useAddProductMutation();
+  const [updateProduct] = useUpdateProductMutation();
+  const [removeProduct] = useRemoveProductMutation();
 
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
@@ -47,14 +61,18 @@ export default function ProductsPage() {
       status: form.status,
     };
 
-    if (editingId !== null) {
-      await updateProduct(editingId, data);
-      setEditingId(null);
-    } else {
-      await addProduct(data);
+    try {
+      if (editingId !== null) {
+        await updateProduct({ id: editingId, ...data }).unwrap();
+        setEditingId(null);
+      } else {
+        await addProduct(data).unwrap();
+      }
+      setForm(emptyForm);
+      setShowForm(false);
+    } catch {
+      setError("Failed to save product.");
     }
-    setForm(emptyForm);
-    setShowForm(false);
   };
 
   const startEdit = (p: Product) => {
@@ -255,7 +273,7 @@ export default function ProductsPage() {
                             title="Edit">
                             <Pencil size={12} />
                           </button>
-                          <button id={`delete-product-${p.id}`} onClick={() => removeProduct(p.id)}
+                          <button id={`delete-product-${p.id}`} onClick={async () => await removeProduct(p.id)}
                             className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors"
                             style={{ background: "oklch(0.60 0.22 25 / 0.12)", color: "oklch(0.60 0.22 25)" }}
                             title="Delete">

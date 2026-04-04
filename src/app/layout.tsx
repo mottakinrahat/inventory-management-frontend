@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { AppProvider } from "@/lib/store";
+import { ReduxProvider } from "@/components/ReduxProvider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -23,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full`}>
       <body className="min-h-full flex flex-col antialiased">
-        <AppProvider>{children}</AppProvider>
+        <ReduxProvider>{children}</ReduxProvider>
       </body>
     </html>
   );

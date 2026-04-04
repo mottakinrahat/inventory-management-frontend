@@ -137,9 +137,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (queueRes.status === "fulfilled") setRestockQueue(queueRes.value?.data || queueRes.value || []);
 
       // Check current user based on token
-      if (localStorage.getItem("accessToken")) {
-        // You might want a /auth/me endpoint. If not, use basic decoding or rely on valid token.
-        setCurrentUser({ name: "User" });
+      const savedToken = localStorage.getItem("accessToken");
+      if (savedToken) {
+        try {
+          const userRes = await apiFetch<any>("/user/me");
+          console.log("Current User Data:", userRes);
+          setCurrentUser(userRes?.data || userRes);
+        } catch (e) {
+          console.error("Failed to fetch user profile", e);
+        }
       }
 
     } catch (e) {

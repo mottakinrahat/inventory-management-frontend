@@ -1,6 +1,11 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import {
+  useGetOrdersQuery,
+  useGetProductsQuery,
+  useGetRestockQueueQuery,
+  useGetActivityLogsQuery,
+} from "@/redux/api/apiSlice";
 import {
   ShoppingCart,
   Wallet,
@@ -32,7 +37,17 @@ const LOG_COLORS: Record<string, string> = {
 };
 
 export default function DashboardPage() {
-  const { orders, products, restockQueue, activityLogs } = useAppStore();
+  const { data: ordersRes } = useGetOrdersQuery({});
+  const orders: any[] = ordersRes?.data || ordersRes || [];
+
+  const { data: prodsRes } = useGetProductsQuery({});
+  const products: any[] = prodsRes?.data || prodsRes || [];
+
+  const { data: queueRes } = useGetRestockQueueQuery({});
+  const restockQueue: any[] = queueRes?.data || queueRes || [];
+
+  const { data: logsRes } = useGetActivityLogsQuery({});
+  const activityLogs: any[] = logsRes?.data || logsRes || [];
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);

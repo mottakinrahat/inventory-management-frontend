@@ -1,9 +1,9 @@
 "use client";
 
-import { useAppStore } from "@/lib/store";
+import { useGetActivityLogsQuery } from "@/redux/api/apiSlice";
 import { Activity, ShoppingCart, Package, RefreshCw, Shield, Star } from "lucide-react";
 
-const TYPE_CONFIG = {
+const TYPE_CONFIG: Record<string, any> = {
   order: { icon: ShoppingCart, bg: "oklch(0.62 0.22 270 / 0.12)", color: "oklch(0.62 0.22 270)", label: "Order" },
   stock: { icon: Package, bg: "oklch(0.68 0.20 170 / 0.12)", color: "oklch(0.68 0.20 170)", label: "Stock" },
   product: { icon: Star, bg: "oklch(0.72 0.18 45 / 0.12)", color: "oklch(0.72 0.18 45)", label: "Product" },
@@ -29,7 +29,8 @@ function formatDate(dateOrStr: Date | string): string {
 }
 
 export default function ActivityPage() {
-  const { activityLogs } = useAppStore();
+  const { data: logsRes } = useGetActivityLogsQuery({});
+  const activityLogs: any[] = logsRes?.data || logsRes || [];
 
   // Group by date
   const groups: Record<string, typeof activityLogs> = {};
