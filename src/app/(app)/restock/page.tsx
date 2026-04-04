@@ -16,11 +16,11 @@ export default function RestockPage() {
   const [restockAmounts, setRestockAmounts] = useState<Record<number, string>>({});
   const [successIds, setSuccessIds] = useState<number[]>([]);
 
-  const handleRestock = (productId: number) => {
+  const handleRestock = async (queueId: number, productId: number) => {
     const amount = parseInt(restockAmounts[productId] ?? "0");
     if (!amount || amount < 1) return;
-    restockProduct(productId, amount);
-    removeFromRestockQueue(productId);
+    await restockProduct(productId, amount);
+    await removeFromRestockQueue(queueId);
     setSuccessIds((prev) => [...prev, productId]);
     setRestockAmounts((prev) => { const n = { ...prev }; delete n[productId]; return n; });
     setTimeout(() => setSuccessIds((prev) => prev.filter((id) => id !== productId)), 2000);
@@ -62,9 +62,12 @@ export default function RestockPage() {
       {restockQueue.length > 0 ? (
         <div className="space-y-3">
           {restockQueue.map((item) => {
-            const { bg, text, border } = PRIORITY_CONFIG[item.priority];
+            const priority = item.priority ?? "Low";
+            const { bg, text, border } = PRIORITY_CONFIG[priority];
             const product = products.find((p) => p.id === item.productId);
-            const pct = (item.currentStock / item.minThreshold) * 100;
+            const currentStock = item.currentStock ?? item.product?.stock ?? 0;
+            const minThreshold = item.minThreshold ?? item.product?.minThreshold ?? 1;
+            const pct = (currentStock / minThreshold) * 100;
             const isSuccess = successIds.includes(item.productId);
 
             return (
@@ -78,9 +81,9 @@ export default function RestockPage() {
                       <Package size={18} style={{ color: text }} />
                     </div>
                     <div>
-                      <p className="font-semibold text-white">{item.productName}</p>
+                      <p className="font-semibold text-white">{item.productName ?? item.product?.name ?? "Unknown Product"}</p>
                       <p className="text-xs" style={{ color: "oklch(0.55 0.01 260)" }}>
-                        {product?.category ?? "Unknown"} • Min: {item.minThreshold} units
+                        {product?.category ?? "Unknown"} • Min: {minThreshold} units
                       </p>
                     </div>
                   </div>
@@ -90,7 +93,7 @@ export default function RestockPage() {
                     <div className="flex justify-between text-xs mb-1">
                       <span style={{ color: "oklch(0.55 0.01 260)" }}>Current stock</span>
                       <span className="font-semibold" style={{ color: text }}>
-                        {item.currentStock} / {item.minThreshold}
+                        {currentStock} / {minThreshold}
                       </span>
                     </div>
                     <div className="h-2 rounded-full" style={{ background: "oklch(0.20 0.02 260)" }}>
@@ -101,7 +104,7 @@ export default function RestockPage() {
 
                   {/* Priority badge */}
                   <span className="badge shrink-0" style={{ background: bg, color: text }}>
-                    {item.priority} Priority
+                    {priority} Priority
                   </span>
 
                   {/* Restock input */}
@@ -117,7 +120,7 @@ export default function RestockPage() {
                     />
                     <button
                       id={`restock-btn-${item.productId}`}
-                      onClick={() => handleRestock(item.productId)}
+                      onClick={() => handleRestock(item.id || item.productId, item.productId)}
                       className="btn-primary"
                       disabled={isSuccess}>
                       {isSuccess ? <Check size={15} /> : <RefreshCw size={15} />}
@@ -125,7 +128,7 @@ export default function RestockPage() {
                     </button>
                     <button
                       id={`remove-queue-${item.productId}`}
-                      onClick={() => removeFromRestockQueue(item.productId)}
+                      onClick={async () => await removeFromRestockQueue(item.id || item.productId)}
                       className="w-9 h-9"
                       style={{ color: "oklch(0.50 0.01 260)" }}
                       title="Remove from queue">

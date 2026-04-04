@@ -1,0 +1,10 @@
+- [x] Create `src/lib/api.ts` with Axios-like fetch wrapper
+- [x] Refactor `src/lib/store.tsx` to use `api.ts` methods instead of seeded data and make mutating functions async.
+- [x] Add application initialization hook to fetch initial data (categories, products, orders, etc.)
+- [x] Connect Authentication pages (`login`, `signup`) to store.
+- [x] Update `src/app/(app)/dashboard/page.tsx`
+- [x] Update `src/app/(app)/categories/page.tsx`
+- [x] Update `src/app/(app)/products/page.tsx`
+- [x] Update `src/app/(app)/orders/page.tsx`
+- [x] Update `src/app/(app)/restock/page.tsx`
+- [x] Update `src/app/(app)/activity/page.tsx`

@@ -32,7 +32,7 @@ export default function ProductsPage() {
     return matchSearch && matchCat && matchStatus;
   });
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError("");
     if (!form.name.trim() || !form.category || !form.price || !form.stock || !form.minThreshold) {
       setError("All fields are required.");
@@ -48,10 +48,10 @@ export default function ProductsPage() {
     };
 
     if (editingId !== null) {
-      updateProduct(editingId, data);
+      await updateProduct(editingId, data);
       setEditingId(null);
     } else {
-      addProduct(data);
+      await addProduct(data);
     }
     setForm(emptyForm);
     setShowForm(false);
@@ -124,7 +124,7 @@ export default function ProductsPage() {
               <select id="product-category" className="select-field"
                 value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                 <option value="">Select Category</option>
-                {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                {categories.map((c: any) => <option key={c.id || c} value={c.name || c}>{c.name || c}</option>)}
               </select>
             </div>
             <div>
@@ -174,7 +174,7 @@ export default function ProductsPage() {
         <select className="select-field w-auto min-w-[140px]"
           value={filterCat} onChange={(e) => setFilterCat(e.target.value)}>
           <option value="">All Categories</option>
-          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+          {categories.map((c: any) => <option key={c.id || c} value={c.name || c}>{c.name || c}</option>)}
         </select>
         <select className="select-field w-auto min-w-[130px]"
           value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>

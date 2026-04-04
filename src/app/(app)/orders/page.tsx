@@ -15,7 +15,8 @@ const STATUS_CONFIG: Record<OrderStatus, { bg: string; text: string; label: stri
   Cancelled: { bg: "oklch(0.60 0.22 25 / 0.15)", text: "oklch(0.60 0.22 25)", label: "Cancelled" },
 };
 
-function timeAgo(date: Date): string {
+function timeAgo(dateOrStr: Date | string): string {
+  const date = typeof dateOrStr === "string" ? new Date(dateOrStr) : dateOrStr;
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
@@ -70,11 +71,11 @@ export default function OrdersPage() {
 
   const total = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = async () => {
     setFormError("");
     if (!customerName.trim()) { setFormError("Customer name is required."); return; }
     if (items.length === 0) { setFormError("Add at least one product to the order."); return; }
-    const result = createOrder(customerName.trim(), items);
+    const result = await createOrder({ customerName: customerName.trim(), items });
     if (!result.success) { setFormError(result.error ?? "Failed to create order."); return; }
     setFormSuccess(`Order created successfully!`);
     setCustomerName(""); setItems([]);
@@ -272,7 +273,7 @@ export default function OrdersPage() {
                           )}
                           {order.status === "Pending" && (
                             <button id={`cancel-order-${order.id}`}
-                              onClick={() => cancelOrder(order.id)}
+                              onClick={async () => await cancelOrder(order.id)}
                               className="btn-danger py-1 px-2.5 text-xs">
                               <X size={11} /> Cancel
                             </button>
@@ -299,7 +300,7 @@ export default function OrdersPage() {
   );
 }
 
-function StatusDropdown({ order, onUpdate }: { order: Order; onUpdate: (id: number, status: OrderStatus) => void }) {
+function StatusDropdown({ order, onUpdate }: { order: Order; onUpdate: (id: number, status: OrderStatus) => Promise<boolean> }) {
   const [open, setOpen] = useState(false);
   const nextStatusesDict: Record<OrderStatus, OrderStatus[]> = {
     Pending: ["Confirmed", "Shipped"],
@@ -326,7 +327,7 @@ function StatusDropdown({ order, onUpdate }: { order: Order; onUpdate: (id: numb
             const { text } = STATUS_CONFIG[s];
             return (
               <button key={s} id={`set-status-${order.id}-${s.toLowerCase()}`}
-                onClick={() => { onUpdate(order.id, s); setOpen(false); }}
+                onClick={async () => { await onUpdate(order.id, s); setOpen(false); }}
                 className="w-full text-left px-3 py-2 text-xs font-medium transition-colors hover:bg-white/5"
                 style={{ color: text }}>
                 → {s}

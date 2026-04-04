@@ -19,13 +19,13 @@ export default function CategoriesPage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     setError(""); setSuccess("");
     if (!newCat.trim()) { setError("Category name cannot be empty."); return; }
-    if (categories.includes(newCat.trim())) {
+    if (categories.find(c => (c.name || c) === newCat.trim())) {
       setError(`"${newCat.trim()}" category already exists.`); return;
     }
-    const ok = addCategory(newCat.trim());
+    const ok = await addCategory(newCat.trim());
     if (ok) {
       setSuccess(`Category "${newCat.trim()}" added successfully.`);
       setNewCat("");
@@ -33,8 +33,8 @@ export default function CategoriesPage() {
     }
   };
 
-  const productCountByCategory = (cat: string) =>
-    products.filter((p) => p.category === cat).length;
+  const productCountByCategory = (catName: string) =>
+    products.filter((p) => p.category === catName || (p as any).categoryId === catName).length;
 
   return (
     <div className="space-y-6 animate-fadeInUp">
@@ -90,11 +90,13 @@ export default function CategoriesPage() {
 
         {categories.length > 0 ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((cat, idx) => {
+            {categories.map((catObj, idx) => {
+              const cat = catObj.name || catObj;
+              const catId = catObj.id || catObj;
               const color = CATEGORY_COLORS[idx % CATEGORY_COLORS.length];
               const count = productCountByCategory(cat);
               return (
-                <div key={cat} className="section-card stat-card relative overflow-hidden group"
+                <div key={catId} className="section-card stat-card relative overflow-hidden group"
                   style={{ borderColor: `${color}22` }}>
                   {/* BG decoration */}
                   <div className="absolute top-0 right-0 w-24 h-24 rounded-full opacity-5 -translate-y-6 translate-x-6"
@@ -109,14 +111,14 @@ export default function CategoriesPage() {
                       <div>
                         <p className="font-semibold text-white">{cat}</p>
                         <p className="text-sm" style={{ color: "oklch(0.55 0.01 260)" }}>
-                          {count} product{count !== 1 ? "s" : ""}
+                           {count} product{count !== 1 ? "s" : ""}
                         </p>
                       </div>
                     </div>
 
                     <button
-                      id={`delete-category-${cat.toLowerCase().replace(/\s+/g, "-")}`}
-                      onClick={() => removeCategory(cat)}
+                      id={`delete-category-${String(cat).toLowerCase().replace(/\s+/g, "-")}`}
+                      onClick={() => removeCategory(catId)}
                       className="opacity-0 group-hover:opacity-100 transition-opacity w-7 h-7 rounded-lg flex items-center justify-center"
                       style={{ background: "oklch(0.60 0.22 25 / 0.15)", color: "oklch(0.60 0.22 25)" }}
                       title="Remove category">
@@ -128,7 +130,7 @@ export default function CategoriesPage() {
                   <div className="mt-4">
                     <div className="h-1 rounded-full" style={{ background: "oklch(0.20 0.02 260)" }}>
                       <div className="h-full rounded-full transition-all duration-500"
-                        style={{ width: `${Math.min(100, (count / Math.max(...categories.map(c => productCountByCategory(c))) * 100) || 0)}%`, background: color }} />
+                        style={{ width: `${Math.min(100, (count / Math.max(...categories.map(c => productCountByCategory(c.name || c))) * 100) || 0)}%`, background: color }} />
                     </div>
                   </div>
                 </div>

@@ -11,11 +11,13 @@ const TYPE_CONFIG = {
   auth: { icon: Shield, bg: "oklch(0.62 0.19 200 / 0.12)", color: "oklch(0.62 0.19 200)", label: "Auth" },
 };
 
-function formatTime(date: Date): string {
+function formatTime(dateOrStr: Date | string): string {
+  const date = typeof dateOrStr === "string" ? new Date(dateOrStr) : dateOrStr;
   return date.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatDate(date: Date): string {
+function formatDate(dateOrStr: Date | string): string {
+  const date = typeof dateOrStr === "string" ? new Date(dateOrStr) : dateOrStr;
   const today = new Date();
   const d = new Date(date);
   today.setHours(0, 0, 0, 0);

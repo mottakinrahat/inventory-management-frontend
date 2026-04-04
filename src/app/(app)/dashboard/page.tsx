@@ -12,7 +12,8 @@ import {
   Activity,
 } from "lucide-react";
 
-function timeAgo(date: Date): string {
+function timeAgo(dateOrStr: Date | string): string {
+  const date = typeof dateOrStr === "string" ? new Date(dateOrStr) : dateOrStr;
   const diff = Date.now() - date.getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return "just now";
@@ -36,7 +37,7 @@ export default function DashboardPage() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const todayOrders = orders.filter((o) => o.createdAt >= today);
+  const todayOrders = orders.filter((o) => new Date(o.createdAt) >= today);
   const todayRevenue = todayOrders.reduce((s, o) => s + o.totalPrice, 0);
   const pendingOrders = orders.filter((o) => o.status === "Pending").length;
   const completedOrders = orders.filter((o) => o.status === "Delivered").length;

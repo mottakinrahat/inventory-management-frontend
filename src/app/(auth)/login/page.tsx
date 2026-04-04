@@ -19,7 +19,12 @@ export default function LoginPage() {
     if (!email || !password) { setError("Please enter email and password."); return; }
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
-    login(email, password);
+    const res = await login({ email, password });
+    if (!res.success) {
+      setError(res.error || "Login failed");
+      setLoading(false);
+      return;
+    }
     router.push("/dashboard");
   };
 
@@ -28,7 +33,12 @@ export default function LoginPage() {
     setPassword("demo1234");
     setLoading(true);
     await new Promise((r) => setTimeout(r, 600));
-    login("demo@example.com", "demo1234");
+    const res = await login({ email: "demo@example.com", password: "password123" });
+    if (!res.success) {
+       setError(res.error || "Login failed");
+       setLoading(false);
+       return;
+    }
     router.push("/dashboard");
   };
 

@@ -7,7 +7,7 @@ import { useAppStore } from "@/lib/store";
 
 export default function SignupPage() {
   const router = useRouter();
-  const { login } = useAppStore();
+  const { signup, login } = useAppStore();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -21,8 +21,14 @@ export default function SignupPage() {
     if (!email.trim()) { setError("Email is required."); return; }
     if (password.length < 6) { setError("Password must be at least 6 characters."); return; }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800));
-    login(email, password);
+    const res = await signup({ name, email, password });
+    if (!res.success) {
+      setError(res.error || "Signup failed");
+      setLoading(false);
+      return;
+    }
+    // Auto login on successful signup
+    await login({ email, password });
     router.push("/dashboard");
   };
 
