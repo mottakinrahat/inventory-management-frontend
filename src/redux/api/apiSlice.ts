@@ -6,7 +6,6 @@ export const apiSlice = createApi({
   baseQuery: fetchBaseQuery({
     baseUrl: 'https://inventory-backend-d.vercel.app/api/v1',
     prepareHeaders: (headers, { getState }) => {
-      // ✅ Now correctly reads .accessToken (was reading undefined before)
       const token = (getState() as RootState).auth.accessToken;
       if (token) {
         headers.set('Authorization', `Bearer ${token}`);
@@ -32,7 +31,6 @@ export const apiSlice = createApi({
         body: userData,
       }),
     }),
-    // ✅ Back to simple query — prepareHeaders now works correctly
     getUserMe: builder.query({
       query: () => '/user/me',
       providesTags: ['User'],
@@ -62,6 +60,10 @@ export const apiSlice = createApi({
     // ---- PRODUCTS ----
     getProducts: builder.query({
       query: () => '/product',
+      providesTags: ['Product'],
+    }),
+    getMyProducts: builder.query({
+      query: () => '/product/my-products',
       providesTags: ['Product'],
     }),
     addProduct: builder.mutation({
@@ -150,6 +152,7 @@ export const {
   useRemoveCategoryMutation,
 
   useGetProductsQuery,
+  useGetMyProductsQuery,
   useAddProductMutation,
   useUpdateProductMutation,
   useRemoveProductMutation,
